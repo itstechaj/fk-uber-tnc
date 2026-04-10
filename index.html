@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Redirecting to Flipkart...</title>
+    <style>
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+            text-align: center; 
+            margin-top: 20vh; 
+            color: #333; 
+            background-color: #f9f9f9; 
+            padding: 20px;
+        }
+        .loader { 
+            border: 4px solid #e0e0e0; 
+            border-top: 4px solid #047BD5; /* Flipkart Blue */
+            border-radius: 50%; 
+            width: 40px; 
+            height: 40px; 
+            animation: spin 1s linear infinite; 
+            margin: 20px auto; 
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .btn { 
+            display: inline-block; 
+            margin-top: 20px; 
+            padding: 12px 24px; 
+            background-color: #047BD5; 
+            color: white; 
+            text-decoration: none; 
+            border-radius: 5px; 
+            font-weight: bold; 
+        }
+    </style>
+</head>
+<body>
+    <h2>Opening Flipkart...</h2>
+    <div class="loader"></div>
+    <p>If you are not redirected automatically, tap the button below.</p>
+    
+    <a href="https://www.flipkart.com/pages/supercoin-uber-tnc" class="btn" id="manual-link">Open Flipkart</a>
+
+    <script>
+        window.onload = function() {
+            var userAgent = navigator.userAgent || navigator.vendor || window.opera;
+            var isAndroid = /android/i.test(userAgent);
+            var isIOS = /iPad|iPhone|iPod/.test(userAgent) && !window.MSStream;
+            
+            var webUrl = "https://www.flipkart.com/pages/supercoin-uber-tnc";
+            
+            // Android setup with a built-in fallback URL
+            var fallbackUrlEncoded = encodeURIComponent(webUrl);
+            var androidIntent = "intent://www.flipkart.com/pages/supercoin-uber-tnc#Intent;scheme=https;package=com.flipkart.android;S.browser_fallback_url=" + fallbackUrlEncoded + ";end";
+
+            if (isAndroid) {
+                // 1. ANDROID: Use Intent URI. The OS automatically handles app vs web fallback.
+                document.getElementById('manual-link').href = androidIntent;
+                window.location.replace(androidIntent);
+            } 
+            else if (isIOS) {
+                // 2. IOS: Attempt app scheme, then fallback to web after 2 seconds
+                var iosScheme = "flipkart://www.flipkart.com/pages/supercoin-uber-tnc";
+                window.location.replace(iosScheme);
+                
+                setTimeout(function() {
+                    window.location.replace(webUrl);
+                }, 2000);
+            } 
+            else {
+                // 3. DESKTOP/BROWSER: Redirect straight to the normal web URL
+                window.location.replace(webUrl);
+            }
+        };
+    </script>
+</body>
+</html>
