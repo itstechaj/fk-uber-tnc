@@ -1,78 +1,116 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Redirecting to Flipkart...</title>
-    <style>
-        body { 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
-            text-align: center; 
-            margin-top: 20vh; 
-            color: #333; 
-            background-color: #f9f9f9; 
-            padding: 20px;
-        }
-        .loader { 
-            border: 4px solid #e0e0e0; 
-            border-top: 4px solid #047BD5; /* Flipkart Blue */
-            border-radius: 50%; 
-            width: 40px; 
-            height: 40px; 
-            animation: spin 1s linear infinite; 
-            margin: 20px auto; 
-        }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .btn { 
-            display: inline-block; 
-            margin-top: 20px; 
-            padding: 12px 24px; 
-            background-color: #047BD5; 
-            color: white; 
-            text-decoration: none; 
-            border-radius: 5px; 
-            font-weight: bold; 
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Redirecting to Flipkart…</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f5f5f5;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      color: #333;
+    }
+    .card {
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 4px 24px rgba(0,0,0,.08);
+      padding: 40px 32px;
+      text-align: center;
+      max-width: 380px;
+      width: 90%;
+    }
+    .spinner {
+      width: 40px; height: 40px;
+      border: 4px solid #e0e0e0;
+      border-top-color: #2874f0;
+      border-radius: 50%;
+      animation: spin .8s linear infinite;
+      margin: 0 auto 20px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    h1 { font-size: 18px; margin-bottom: 8px; }
+    p  { font-size: 14px; color: #666; margin-bottom: 24px; }
+    .btn {
+      display: inline-block;
+      padding: 12px 28px;
+      background: #2874f0;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 600;
+      text-decoration: none;
+      cursor: pointer;
+      transition: background .2s;
+    }
+    .btn:hover { background: #1a5dc8; }
+    .hidden { display: none; }
+  </style>
 </head>
 <body>
-    <h2>Opening Flipkart...</h2>
-    <div class="loader"></div>
-    <p>If you are not redirected automatically, tap the button below.</p>
-    
-    <a href="https://www.flipkart.com/pages/supercoin-uber-tnc" class="btn" id="manual-link">Open Flipkart</a>
+  <div class="card">
+    <div class="spinner" id="spinner"></div>
+    <h1>Opening Flipkart…</h1>
+    <p>You will be redirected automatically.</p>
+    <a id="fallbackBtn" class="btn hidden" href="#">Open in Browser</a>
+  </div>
 
-    <script>
-        window.onload = function() {
-            var userAgent = navigator.userAgent || navigator.vendor || window.opera;
-            var isAndroid = /android/i.test(userAgent);
-            var isIOS = /iPad|iPhone|iPod/.test(userAgent) && !window.MSStream;
-            
-            var webUrl = "https://www.flipkart.com/pages/supercoin-uber-tnc";
-            
-            // Android setup with a built-in fallback URL
-            var fallbackUrlEncoded = encodeURIComponent(webUrl);
-            var androidIntent = "intent://www.flipkart.com/pages/supercoin-uber-tnc#Intent;scheme=https;package=com.flipkart.android;S.browser_fallback_url=" + fallbackUrlEncoded + ";end";
+  <script>
+    (function () {
+      var TARGET_URL  = "https://www.flipkart.com/pages/supercoin-uber-tnc";
+      var FK_PACKAGE  = "com.flipkart.android";
 
-            if (isAndroid) {
-                // 1. ANDROID: Use Intent URI. The OS automatically handles app vs web fallback.
-                document.getElementById('manual-link').href = androidIntent;
-                window.location.replace(androidIntent);
-            } 
-            else if (isIOS) {
-                // 2. IOS: Attempt app scheme, then fallback to web after 2 seconds
-                var iosScheme = "flipkart://www.flipkart.com/pages/supercoin-uber-tnc";
-                window.location.replace(iosScheme);
-                
-                setTimeout(function() {
-                    window.location.replace(webUrl);
-                }, 2000);
-            } 
-            else {
-                // 3. DESKTOP/BROWSER: Redirect straight to the normal web URL
-                window.location.replace(webUrl);
-            }
-        };
-    </script>
+      var INTENT_URL  =
+        "intent://www.flipkart.com/pages/supercoin-uber-tnc" +
+        "#Intent;" +
+        "scheme=https;" +
+        "package=" + FK_PACKAGE + ";" +
+        "S.browser_fallback_url=" + encodeURIComponent(TARGET_URL) + ";" +
+        "end";
+
+      var ua = navigator.userAgent || "";
+
+      function isAndroid()  { return /android/i.test(ua); }
+      function isIOS()      { return /iphone|ipad|ipod/i.test(ua); }
+
+      function showFallback() {
+        var btn = document.getElementById("fallbackBtn");
+        btn.href = TARGET_URL;
+        btn.classList.remove("hidden");
+        document.getElementById("spinner").style.display = "none";
+      }
+
+      if (isAndroid()) {
+        /*
+         * Android path:
+         * 1. Try intent:// — the OS will open the Flipkart app if installed.
+         * 2. If the app is missing, Android automatically navigates to
+         *    the S.browser_fallback_url we embedded in the intent.
+         * 3. As a safety-net, show a manual button after 2 s.
+         */
+        window.location.replace(INTENT_URL);
+        setTimeout(showFallback, 2000);
+
+      } else if (isIOS()) {
+        /*
+         * iOS path:
+         * Universal Links handle https:// flipkart.com URLs natively.
+         * Redirecting to the target URL is enough — iOS opens the app
+         * if installed, otherwise Safari loads the page.
+         */
+        window.location.replace(TARGET_URL);
+        setTimeout(showFallback, 2500);
+
+      } else {
+        /* Desktop / unknown — go straight to the browser page. */
+        window.location.replace(TARGET_URL);
+      }
+    })();
+  </script>
 </body>
 </html>
