@@ -21,7 +21,7 @@
       box-shadow: 0 4px 24px rgba(0,0,0,.08);
       padding: 40px 32px;
       text-align: center;
-      max-width: 380px;
+      max-width: 400px;
       width: 90%;
     }
     .spinner {
@@ -34,38 +34,60 @@
     }
     @keyframes spin { to { transform: rotate(360deg); } }
     h1 { font-size: 18px; margin-bottom: 8px; }
-    p  { font-size: 14px; color: #666; margin-bottom: 24px; }
+    p  { font-size: 14px; color: #666; margin-bottom: 20px; line-height: 1.5; }
     .btn {
-      display: inline-block;
-      padding: 12px 28px;
+      display: block;
+      width: 100%;
+      padding: 14px 28px;
       background: #2874f0;
       color: #fff;
       border: none;
       border-radius: 8px;
-      font-size: 15px;
+      font-size: 16px;
       font-weight: 600;
       text-decoration: none;
       cursor: pointer;
       transition: background .2s;
+      margin-bottom: 10px;
+      -webkit-appearance: none;
     }
     .btn:hover { background: #1a5dc8; }
+    .btn-secondary {
+      background: transparent;
+      color: #2874f0;
+      border: 2px solid #2874f0;
+      font-size: 14px;
+      padding: 10px 28px;
+    }
+    .btn-secondary:hover { background: #f0f5ff; }
     .hidden { display: none; }
+    .status { font-size: 12px; color: #999; margin-top: 12px; }
   </style>
 </head>
 <body>
   <div class="card">
     <div class="spinner" id="spinner"></div>
-    <h1>Opening Flipkart…</h1>
-    <p>You will be redirected automatically.</p>
-    <a id="fallbackBtn" class="btn hidden" href="#">Open in Browser</a>
+    <h1 id="title">Opening Flipkart…</h1>
+    <p id="subtitle">You will be redirected automatically.</p>
+
+    <button id="openBtn" class="btn hidden" onclick="handleOpenClick()">
+      Open Flipkart
+    </button>
+    <button id="browserBtn" class="btn btn-secondary hidden" onclick="handleBrowserClick()">
+      Open in Browser Instead
+    </button>
+    <div id="status" class="status hidden"></div>
   </div>
+
+  <!-- Hidden iframe used to silently fire intent URIs -->
+  <iframe id="intentFrame" style="display:none;width:0;height:0;border:0;" sandbox="allow-top-navigation"></iframe>
 
   <script>
     (function () {
-      var TARGET_URL  = "https://www.flipkart.com/pages/supercoin-uber-tnc";
-      var FK_PACKAGE  = "com.flipkart.android";
+      var TARGET_URL = "https://www.flipkart.com/pages/supercoin-uber-tnc";
+      var FK_PACKAGE = "com.flipkart.android";
 
-      var INTENT_URL  =
+      var INTENT_APP =
         "intent://www.flipkart.com/pages/supercoin-uber-tnc" +
         "#Intent;" +
         "scheme=https;" +
@@ -73,41 +95,150 @@
         "S.browser_fallback_url=" + encodeURIComponent(TARGET_URL) + ";" +
         "end";
 
+      var INTENT_BROWSER =
+        "intent://www.flipkart.com/pages/supercoin-uber-tnc" +
+        "#Intent;" +
+        "scheme=https;" +
+        "action=android.intent.action.VIEW;" +
+        "category=android.intent.category.BROWSABLE;" +
+        "end";
+
       var ua = navigator.userAgent || "";
 
-      function isAndroid()  { return /android/i.test(ua); }
-      function isIOS()      { return /iphone|ipad|ipod/i.test(ua); }
+      function isAndroid() { return /android/i.test(ua); }
+      function isIOS()     { return /iphone|ipad|ipod/i.test(ua); }
 
-      function showFallback() {
-        var btn = document.getElementById("fallbackBtn");
-        btn.href = TARGET_URL;
-        btn.classList.remove("hidden");
-        document.getElementById("spinner").style.display = "none";
+      function isWebView() {
+        if (!isAndroid()) return false;
+        /* Common WebView indicators on Android */
+        return /wv\b/.test(ua) ||
+               (/Android/.test(ua) && /Version\/[\d.]+/.test(ua) && !/Chrome/.test(ua)) ||
+               /\bFB[A-Z]|Instagram|Uber|Line\//i.test(ua);
       }
 
+      function setStatus(msg) {
+        var el = document.getElementById("status");
+        el.textContent = msg;
+        el.classList.remove("hidden");
+      }
+
+      function showButtons() {
+        document.getElementById("spinner").style.display = "none";
+        document.getElementById("title").textContent = "Tap to continue";
+        document.getElementById("subtitle").textContent =
+          "Tap the button below to open this page in Flipkart.";
+        document.getElementById("openBtn").classList.remove("hidden");
+        document.getElementById("browserBtn").classList.remove("hidden");
+      }
+
+      /* ---- Attempt strategies to escape the WebView ---- */
+
+      function tryIntentViaIframe(intentUrl) {
+        try {
+          var frame = document.getElementById("intentFrame");
+          frame.src = intentUrl;
+        } catch (e) { /* swallow */ }
+      }
+
+      function tryIntentViaLocation(intentUrl) {
+        try {
+          window.location.href = intentUrl;
+        } catch (e) { /* swallow */ }
+      }
+
+      function tryWindowOpen(url) {
+        try {
+          var w = window.open(url, "_blank");
+          if (w) return true;
+          w = window.open(url, "_system");
+          if (w) return true;
+        } catch (e) { /* swallow */ }
+        return false;
+      }
+
+      function tryAnchorClick(url) {
+        try {
+          var a = document.createElement("a");
+          a.href = url;
+          a.target = "_blank";
+          a.rel = "noopener noreferrer";
+          a.style.display = "none";
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          return true;
+        } catch (e) { /* swallow */ }
+        return false;
+      }
+
+      /* ---- Click handlers (user-initiated = higher WebView trust) ---- */
+
+      window.handleOpenClick = function () {
+        setStatus("Trying to open Flipkart app…");
+
+        tryIntentViaLocation(INTENT_APP);
+
+        setTimeout(function () {
+          tryIntentViaIframe(INTENT_APP);
+        }, 300);
+
+        setTimeout(function () {
+          tryWindowOpen(INTENT_APP);
+        }, 600);
+
+        setTimeout(function () {
+          setStatus("If nothing happened, try 'Open in Browser Instead'.");
+        }, 2000);
+      };
+
+      window.handleBrowserClick = function () {
+        setStatus("Opening in browser…");
+
+        tryIntentViaLocation(INTENT_BROWSER);
+
+        setTimeout(function () {
+          if (!tryWindowOpen(TARGET_URL)) {
+            tryAnchorClick(TARGET_URL);
+          }
+        }, 300);
+
+        setTimeout(function () {
+          window.location.href = TARGET_URL;
+        }, 800);
+
+        setTimeout(function () {
+          setStatus("Still here? Use your browser's menu (⋮) → 'Open in Chrome'.");
+        }, 2500);
+      };
+
+      /* ---- Auto-attempt on page load ---- */
+
       if (isAndroid()) {
-        /*
-         * Android path:
-         * 1. Try intent:// — the OS will open the Flipkart app if installed.
-         * 2. If the app is missing, Android automatically navigates to
-         *    the S.browser_fallback_url we embedded in the intent.
-         * 3. As a safety-net, show a manual button after 2 s.
-         */
-        window.location.replace(INTENT_URL);
-        setTimeout(showFallback, 2000);
+        if (isWebView()) {
+          /*
+           * Inside a WebView (likely Uber):
+           * Auto-attempts often get blocked, so fire a quick intent
+           * attempt via iframe then immediately show manual buttons.
+           */
+          tryIntentViaIframe(INTENT_APP);
+
+          setTimeout(function () {
+            tryIntentViaLocation(INTENT_APP);
+          }, 200);
+
+          setTimeout(showButtons, 800);
+
+        } else {
+          /* Real browser — intent:// works reliably here */
+          window.location.replace(INTENT_APP);
+          setTimeout(showButtons, 2000);
+        }
 
       } else if (isIOS()) {
-        /*
-         * iOS path:
-         * Universal Links handle https:// flipkart.com URLs natively.
-         * Redirecting to the target URL is enough — iOS opens the app
-         * if installed, otherwise Safari loads the page.
-         */
         window.location.replace(TARGET_URL);
-        setTimeout(showFallback, 2500);
+        setTimeout(showButtons, 2500);
 
       } else {
-        /* Desktop / unknown — go straight to the browser page. */
         window.location.replace(TARGET_URL);
       }
     })();
