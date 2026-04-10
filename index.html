@@ -40,6 +40,24 @@
       padding: 8px 16px;
       gap: 16px;
     }
+    .back-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+      flex-shrink: 0;
+      cursor: pointer;
+      border: none;
+      background: transparent;
+      border-radius: 50%;
+      -webkit-tap-highlight-color: transparent;
+      transition: background .15s;
+    }
+    .back-btn:hover { background: rgba(255,255,255,.15); }
+    .back-btn:active { background: rgba(255,255,255,.25); }
+    .back-btn svg { display: block; }
+
     .logo-group {
       display: flex;
       flex-direction: column;
@@ -244,6 +262,11 @@
   <!-- Header -->
   <header class="header">
     <div class="header-inner">
+      <button class="back-btn" onclick="history.back()" aria-label="Go back">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M15 19l-7-7 7-7" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
       <div class="logo-group">
         <a href="https://www.flipkart.com/">
           <img src="https://static-assets-web.flixcart.com/batman-returns/batman-returns/p/images/fkheaderlogo_exploreplus-44005d.svg"
